@@ -2,40 +2,9 @@
 #include <deque>
 #include <vector>
 #include "raylib.h"
+#include "pipe.h"
 
 const int win_w{640}, win_h{480}, gravity{3000}, win_offset{64}, MAX_PIPES{5};
-
-class Pipe
-{
-private:
-    Texture2D texture{LoadTexture("sprites/pipe-green.png")};
-    Vector2 pipePos{win_w, static_cast<float>(GetRandomValue(250, 450))};
-
-public:
-    Pipe() {};
-    Pipe(Vector2 pos) : pipePos(pos) {};
-    Pipe(Texture2D tex, Vector2 pos) : texture(tex), pipePos(pos) {};
-    Vector2 &getPos() { return pipePos; };
-    Texture2D getTexture() { return texture; }
-    int getWidth() { return texture.width; };
-    int getHeight() { return texture.height; };
-    Rectangle getUpperCollisionRec()
-    {
-        return Rectangle{
-            pipePos.x,
-            win_offset,
-            static_cast<float>(texture.width),
-            static_cast<float>(pipePos.y - 150 - win_offset)};
-    };
-    Rectangle getBottomCollisionRec()
-    {
-        return Rectangle{
-            pipePos.x,
-            pipePos.y,
-            static_cast<float>(texture.width),
-            static_cast<float>(win_h + win_offset - pipePos.y)};
-    };
-};
 
 bool InAir(Vector2 pos, Texture2D flappy)
 {
@@ -108,9 +77,9 @@ void GeneratePipes(std::deque<Pipe>& pipes, float pipeInterval) {
 int main()
 {
 
-    InitWindow(win_w, win_h + 2 * win_offset, "Template");
+    InitWindow(win_w, win_h + 2 * win_offset, "Flappy Bird");
     SetTargetFPS(60);
-    float birdScale{1.5f}, bgScale{1.1f};
+    float birdScale{1.5f}, bgScale{1.1f}; 
 
     Texture2D midflap{LoadTexture("sprites/bluebird-midflap.png")};
     Texture2D downflap{LoadTexture("sprites/bluebird-downflap.png")};
@@ -176,7 +145,7 @@ int main()
                 continue;
             }
             
-            if (IsKeyPressed(KEY_UP) && velocity >= gravity / 30.f)
+            if (IsKeyPressed(KEY_SPACE) && velocity >= gravity / 30.f)
             {
                 velocity = - gravity / 5.0f;
                 flappy = downflap; 

@@ -1,10 +1,45 @@
 #include <iostream>
+#include <deque>
+#include <vector>
 #include "raylib.h"
 
-const int win_w{640}, win_h{480}, gravity{3000}, win_offset{64};
+const int win_w{640}, win_h{480}, gravity{3000}, win_offset{64}, MAX_PIPES{5};
+
+class Pipe
+{
+private:
+    Texture2D texture{LoadTexture("sprites/pipe-green.png")};
+    Vector2 pipePos{win_w, static_cast<float>(GetRandomValue(250, 450))};
+
+public:
+    Pipe() {};
+    Pipe(Vector2 pos) : pipePos(pos) {};
+    Pipe(Texture2D tex, Vector2 pos) : texture(tex), pipePos(pos) {};
+    Vector2 &getPos() { return pipePos; };
+    Texture2D getTexture() { return texture; }
+    int getWidth() { return texture.width; };
+    int getHeight() { return texture.height; };
+    Rectangle getUpperCollisionRec()
+    {
+        return Rectangle{
+            pipePos.x,
+            win_offset,
+            static_cast<float>(texture.width),
+            static_cast<float>(pipePos.y - 150 - win_offset)};
+    };
+    Rectangle getBottomCollisionRec()
+    {
+        return Rectangle{
+            pipePos.x,
+            pipePos.y,
+            static_cast<float>(texture.width),
+            static_cast<float>(win_h + win_offset - pipePos.y)};
+    };
+};
+
 bool InAir(Vector2 pos, Texture2D flappy)
 {
-    return pos.y < (win_h + win_offset);
+    return pos.y < (win_h + win_offset - 90);
 }
 
 Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX, float dT)
@@ -24,11 +59,57 @@ Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX
     return pos;
 }
 
+void moveToBack(std::deque<Pipe> &pipes)
+{
+    Pipe pipe = pipes[0];
+    pipes.pop_front();
+    pipes.push_back(pipe);
+}
+
+void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float dT)
+{
+    std::vector<size_t> pipesToMove;
+    for (size_t i = 0; i < pipes.size(); ++i)
+    {
+        Pipe &pipe = pipes[i];
+        pipe.getPos().x -= velX * dT;
+        if (pipe.getPos().x < -pipe.getWidth() - 10)
+        {
+            Pipe lastPipe = pipes.back();
+            // Pipe lastPipe = pipes[MAX_PIPES - 1]; // redundant, removed
+            pipe.getPos().x = lastPipe.getPos().x + pipeInterval;
+            pipe.getPos().y = GetRandomValue(250, 500);
+            pipesToMove.push_back(i);
+        }
+        // if (pipe.getPos().y < 300) pipe.getPos().y = 300.f;
+        // Only draw pipes that are within the visible vertical range (y < 500)
+        if (pipe.getPos().y < 500)
+        {
+            DrawTexturePro(pipe.getTexture(), {0.f, 0.f, 1.f * pipe.getWidth(), 1.f * pipe.getHeight()}, {pipe.getPos().x, pipe.getPos().y, 1.f * pipe.getWidth(), 1.f * pipe.getHeight()}, {0.f, 0.f}, 0.f, WHITE);
+            DrawTexturePro(pipe.getTexture(), {0.f, 0.f, 1.f * pipe.getWidth(), -1.f * pipe.getHeight()}, {pipe.getPos().x, pipe.getPos().y - 150.f, 1.f * pipe.getWidth(), 1.f * pipe.getHeight()}, {0.f, 1.f * pipe.getHeight()}, 0.f, WHITE);
+        }
+    }
+    for (size_t i = 0; i < pipesToMove.size(); ++i)
+    {
+        if (!pipes.empty())
+        {
+            moveToBack(pipes);
+        }
+    }
+}
+
+void GeneratePipes(std::deque<Pipe>& pipes, float pipeInterval) {
+    for (int i = 0; i < MAX_PIPES; i++)
+    {
+        pipes.push_back(Pipe{Vector2{win_w + i * pipeInterval, (float)GetRandomValue(250, 450)}});
+    }
+}
+
 int main()
 {
 
     InitWindow(win_w, win_h + 2 * win_offset, "Template");
-    SetTargetFPS(20);
+    SetTargetFPS(60);
     float birdScale{1.5f}, bgScale{1.1f};
 
     Texture2D midflap{LoadTexture("sprites/bluebird-midflap.png")};
@@ -41,58 +122,90 @@ int main()
 
     Vector2 birdPos{win_w / 4.f, (win_h / 3.f) + win_offset};
     DrawTextureEx(flappy, birdPos, 0.f, birdScale, WHITE);
-    int velocity{};
+    float velocity{-gravity / 5.f};
     int gameState{}; // 0 = playing, 1 = paused, 2 = over
     int score{};
 
     Vector2 basePos{0.f, (float)(win_h + 2 * win_offset - base.height)};
-
     Vector2 bgPos{};
+
+    float pipeInterval{win_w / 3.f};
+
+    std::deque<Pipe> pipes;
+    GeneratePipes(pipes, pipeInterval);
+
+
+    int scrollVel{60};
     while (!WindowShouldClose())
     {
         float dT = GetFrameTime();
         BeginDrawing();
         ClearBackground(WHITE);
-        
-        bgPos = scrollBackground(background, bgScale, bgPos, 20, dT);
-        basePos = scrollBackground(base, bgScale, basePos, 60, dT);
 
+        // DrawTextureEx(pipeUp, {100.f, win_h + win_offset - 200}, 0.f, 1.0, WHITE );
 
-        DrawRectangle(0.f, 0.f, win_w, win_offset, WHITE);
-        DrawLineEx({0, win_offset - 2}, {win_w, win_offset - 2}, 4, BLACK);
-        DrawText("Flappy Bird", 10, 10, 40, BLACK);
-        DrawText(TextFormat("%i", score), win_w - 50, 10, 40, BLACK);
+        bgPos = scrollBackground(background, bgScale, bgPos, scrollVel / 3, dT);
+        scrollPipe(pipes, pipeInterval, scrollVel, dT);
+        basePos = scrollBackground(base, bgScale, basePos, scrollVel, dT);
 
-        if (gameState > 1 && IsKeyPressed(KEY_SPACE))
-        {
-            gameState = 0;
-            birdPos = {win_w / 4.f, (win_h / 3.f) + win_offset};
-            score = -1;
-        }
-
-        if (!InAir(birdPos, flappy) || birdPos.y < -100 )
+        if (gameState == 2)
         {
             DrawRectangle(0.f, win_offset, win_w, win_h + win_offset, Color{255, 255, 255, 128});
             DrawText("Game Over!", 10, 2 * win_h / 3, 40, BLACK);
             DrawText(TextFormat("Score: %i", score), 10, 2 * win_h / 3 + 40, 40, BLACK);
             DrawText("Press [Space] to restart.", 10, 2 * win_h / 3 + 80, 20, BLACK);
-            EndDrawing();
-            gameState = 2;
-            continue;
+            if (IsKeyPressed(KEY_SPACE))
+            {
+                gameState = 0;
+                birdPos = {win_w / 4.f, (win_h / 3.f) + win_offset};
+                score = 0;
+                scrollVel = 60;
+                velocity = -gravity / 5.f;
+                pipes.clear();
+                GeneratePipes(pipes, pipeInterval);
+                continue;
+            }
         }
-
-        velocity += InAir(birdPos, flappy) ? gravity * dT : 0;
-
-        flappy = InAir(birdPos, flappy) ? upflap : midflap;
-        if (IsKeyPressed(KEY_SPACE) && velocity >= gravity / 12.5f)
+        else
         {
-            velocity = -gravity / 4.0f;
-            flappy = downflap;
-            score++;
-        }
-        birdPos.y += velocity * dT;
-        DrawTextureEx(flappy, birdPos, 0.f, birdScale, WHITE);
+            if (!InAir(birdPos, flappy) || birdPos.y < -100)
+            {
+                gameState = 2;
+                scrollVel = 0;
+                velocity = 0.f;
+                continue;
+            }
+            
+            if (IsKeyPressed(KEY_UP) && velocity >= gravity / 30.f)
+            {
+                velocity = - gravity / 5.0f;
+                flappy = downflap; 
+                score++;
+            }
+            velocity += InAir(birdPos, flappy) ? gravity * dT : 0;
+            flappy = InAir(birdPos, flappy) ? upflap : midflap;
 
+            birdPos.y += velocity * dT;
+
+            Rectangle birdRec = {birdPos.x, birdPos.y, (float)flappy.width, (float)flappy.height};
+            for (auto &pipe : pipes)
+            {
+                if (CheckCollisionRecs(birdRec, pipe.getBottomCollisionRec()) || CheckCollisionRecs(birdRec, pipe.getUpperCollisionRec()))
+                {
+                    // collision
+                    gameState = 2;
+                    scrollVel = 0;
+                    velocity = 0.f;
+                    break;
+                } 
+            }
+            DrawTextureEx(flappy, birdPos, 0.f, birdScale, WHITE);
+        }
+
+        DrawRectangle(0.f, 0.f, win_w, win_offset, WHITE);
+        DrawLineEx({0, win_offset - 2}, {win_w, win_offset - 2}, 4, BLACK);
+        DrawText("Flappy Bird", 10, 10, 40, BLACK);
+        DrawText(TextFormat("%i", score), win_w - 60, 10, 40, BLACK);
         EndDrawing();
     }
 

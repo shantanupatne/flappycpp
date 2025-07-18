@@ -3,13 +3,8 @@
 #include <vector>
 #include "raylib.h"
 #include "pipe.h"
-
-const int win_w{640}, win_h{480}, gravity{3000}, win_offset{64}, MAX_PIPES{5};
-
-bool InAir(Vector2 pos, Texture2D flappy)
-{
-    return pos.y < (win_h + win_offset - 90);
-}
+#include "flappy.h"
+#include "global.h"
 
 Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX, float dT)
 {
@@ -66,7 +61,7 @@ void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float d
         }
     }
 }
-
+ 
 void GeneratePipes(std::deque<Pipe>& pipes, float pipeInterval) {
     for (int i = 0; i < MAX_PIPES; i++)
     {
@@ -79,19 +74,15 @@ int main()
 
     InitWindow(win_w, win_h + 2 * win_offset, "Flappy Bird");
     SetTargetFPS(60);
-    float birdScale{1.5f}, bgScale{1.1f}; 
+    float bgScale{1.1f}; 
 
-    Texture2D midflap{LoadTexture("sprites/bluebird-midflap.png")};
-    Texture2D downflap{LoadTexture("sprites/bluebird-downflap.png")};
-    Texture2D upflap{LoadTexture("sprites/bluebird-upflap.png")};
-    Texture2D flappy{midflap};
+    Flappy flappy;
 
     Texture2D base{LoadTexture("sprites/base.png")};
     Texture2D background{LoadTexture("sprites/background-day.png")};
 
-    Vector2 birdPos{win_w / 4.f, (win_h / 3.f) + win_offset};
-    DrawTextureEx(flappy, birdPos, 0.f, birdScale, WHITE);
-    float velocity{-gravity / 5.f};
+    // Vector2 birdPos{win_w / 4.f, (win_h / 3.f) + win_offset};
+    // float velocity{-gravity / 5.f};
     int gameState{}; // 0 = playing, 1 = paused, 2 = over
     int score{};
 
@@ -126,37 +117,40 @@ int main()
             if (IsKeyPressed(KEY_SPACE))
             {
                 gameState = 0;
-                birdPos = {win_w / 4.f, (win_h / 3.f) + win_offset};
+                // birdPos = {win_w / 4.f, (win_h / 3.f) + win_offset};
                 score = 0;
                 scrollVel = 60;
-                velocity = -gravity / 5.f;
+                // velocity = -gravity / 5.f;
                 pipes.clear();
+                flappy.Reset();
                 GeneratePipes(pipes, pipeInterval);
                 continue;
             }
         }
         else
         {
-            if (!InAir(birdPos, flappy) || birdPos.y < -100)
+            if (!flappy.CheckInAir() || flappy.GetPos().y < -100)
             {
                 gameState = 2;
                 scrollVel = 0;
-                velocity = 0.f;
+                // velocity = 0.f;
                 continue;
             }
             
-            if (IsKeyPressed(KEY_SPACE) && velocity >= gravity / 30.f)
-            {
-                velocity = - gravity / 5.0f;
-                flappy = downflap; 
-                score++;
-            }
-            velocity += InAir(birdPos, flappy) ? gravity * dT : 0;
-            flappy = InAir(birdPos, flappy) ? upflap : midflap;
+            // if (IsKeyPressed(KEY_SPACE) && velocity >= gravity / 30.f)
+            // {
+            //     velocity = - gravity / 5.0f;
+            //     flappy = downflap; 
+            //     score++;
+            // }
+            // velocity += InAir(birdPos, flappy) ? gravity * dT : 0;
+            // flappy = InAir(birdPos, flappy) ? upflap : midflap;
 
-            birdPos.y += velocity * dT;
+            // birdPos.y += velocity * dT;
+            flappy.Update(dT, IsKeyPressed((KEY_SPACE)));
 
-            Rectangle birdRec = {birdPos.x, birdPos.y, (float)flappy.width, (float)flappy.height};
+            // Rectangle birdRec = {birdPos.x, birdPos.y, (float)flappy.width, (float)flappy.height};
+            Rectangle birdRec {flappy.GetCollisionRect()};
             for (auto &pipe : pipes)
             {
                 if (CheckCollisionRecs(birdRec, pipe.getBottomCollisionRec()) || CheckCollisionRecs(birdRec, pipe.getUpperCollisionRec()))
@@ -164,11 +158,11 @@ int main()
                     // collision
                     gameState = 2;
                     scrollVel = 0;
-                    velocity = 0.f;
+                    // velocity = 0.f;
                     break;
                 } 
             }
-            DrawTextureEx(flappy, birdPos, 0.f, birdScale, WHITE);
+            flappy.Draw();
         }
 
         DrawRectangle(0.f, 0.f, win_w, win_offset, WHITE);

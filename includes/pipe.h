@@ -8,7 +8,7 @@ class Pipe
 private:
     int win_w{640}, win_h{480}, win_offset{64};
     Texture2D texture{LoadTexture("sprites/pipe-green.png")};
-    Vector2 pipePos{win_w, static_cast<float>(GetRandomValue(250, 450))};
+    Vector2 pipePos{static_cast<float>(win_w), static_cast<float>(GetRandomValue(250, 450))};
 
 public:
     Pipe() {};

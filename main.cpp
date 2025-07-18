@@ -81,8 +81,6 @@ int main()
     Texture2D base{LoadTexture("sprites/base.png")};
     Texture2D background{LoadTexture("sprites/background-day.png")};
 
-    // Vector2 birdPos{win_w / 4.f, (win_h / 3.f) + win_offset};
-    // float velocity{-gravity / 5.f};
     int gameState{}; // 0 = playing, 1 = paused, 2 = over
     int score{};
 
@@ -102,7 +100,6 @@ int main()
         BeginDrawing();
         ClearBackground(WHITE);
 
-        // DrawTextureEx(pipeUp, {100.f, win_h + win_offset - 200}, 0.f, 1.0, WHITE );
 
         bgPos = scrollBackground(background, bgScale, bgPos, scrollVel / 3, dT);
         scrollPipe(pipes, pipeInterval, scrollVel, dT);
@@ -117,10 +114,8 @@ int main()
             if (IsKeyPressed(KEY_SPACE))
             {
                 gameState = 0;
-                // birdPos = {win_w / 4.f, (win_h / 3.f) + win_offset};
                 score = 0;
                 scrollVel = 60;
-                // velocity = -gravity / 5.f;
                 pipes.clear();
                 flappy.Reset();
                 GeneratePipes(pipes, pipeInterval);
@@ -137,19 +132,8 @@ int main()
                 continue;
             }
             
-            // if (IsKeyPressed(KEY_SPACE) && velocity >= gravity / 30.f)
-            // {
-            //     velocity = - gravity / 5.0f;
-            //     flappy = downflap; 
-            //     score++;
-            // }
-            // velocity += InAir(birdPos, flappy) ? gravity * dT : 0;
-            // flappy = InAir(birdPos, flappy) ? upflap : midflap;
-
-            // birdPos.y += velocity * dT;
             flappy.Update(dT, IsKeyPressed((KEY_SPACE)));
 
-            // Rectangle birdRec = {birdPos.x, birdPos.y, (float)flappy.width, (float)flappy.height};
             Rectangle birdRec {flappy.GetCollisionRect()};
             for (auto &pipe : pipes)
             {
@@ -158,7 +142,6 @@ int main()
                     // collision
                     gameState = 2;
                     scrollVel = 0;
-                    // velocity = 0.f;
                     break;
                 } 
             }

@@ -1,3 +1,9 @@
+/**
+ * @author Shantanu Patne
+ * @date July 12, 2025
+ * @brief Simple Flappy Bird Game
+ */
+
 #include <iostream>
 #include <deque>
 #include <vector>
@@ -6,6 +12,19 @@
 #include "flappy.h"
 #include "global.h"
 
+/**
+ * @brief Scrolls and draws a repeating background texture.
+ *
+ * This function updates the horizontal position of a background texture to create a scrolling effect.
+ * It draws three instances of the texture side by side to ensure seamless looping as the background scrolls.
+ *
+ * @param texture The Texture2D object representing the background image.
+ * @param scale The scaling factor to apply to the texture when drawing.
+ * @param pos The current position (Vector2) of the background.
+ * @param velX The horizontal scrolling speed (pixels per second).
+ * @param dT The delta time (in seconds) since the last frame.
+ * @return Vector2 The updated position of the background after scrolling.
+ */
 Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX, float dT)
 {
     pos.x -= velX * dT;
@@ -23,14 +42,20 @@ Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX
     return pos;
 }
 
-void moveToBack(std::deque<Pipe> &pipes)
-{
-    Pipe pipe = pipes[0];
-    pipe.setIsPassed(false);
-    pipes.pop_front();
-    pipes.push_back(pipe);
-}
-
+/**
+ * @brief Scrolls and manages the pipes in the Flappy Bird game.
+ *
+ * This function updates the horizontal position of each pipe in the provided deque,
+ * simulating the scrolling effect as the game progresses. When a pipe moves off-screen
+ * to the left, it is repositioned to the right of the last pipe with a new random vertical
+ * position, creating an endless loop of pipes. The function also handles drawing the pipes
+ * within the visible vertical range and resets the "passed" state for recycled pipes.
+ *
+ * @param pipes         Reference to a deque of Pipe objects to be scrolled and managed.
+ * @param pipeInterval  The horizontal distance between consecutive pipes.
+ * @param velX          The horizontal velocity at which pipes move (pixels per second).
+ * @param dT            The time delta since the last update (in seconds).
+ */
 void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float dT)
 {
     std::vector<size_t> pipesToMove;
@@ -53,15 +78,29 @@ void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float d
             DrawTexturePro(pipe.getTexture(), {0.f, 0.f, 1.f * pipe.getWidth(), -1.f * pipe.getHeight()}, {pipe.getPos().x, pipe.getPos().y - 150.f, 1.f * pipe.getWidth(), 1.f * pipe.getHeight()}, {0.f, 1.f * pipe.getHeight()}, 0.f, WHITE);
         }
     }
-    for (size_t i = 0; i < pipesToMove.size(); ++i)
+
+    if (!pipesToMove.empty() && !pipes.empty()) 
     {
-        if (!pipes.empty())
+        for (auto pipeIndex : pipesToMove)
         {
-            moveToBack(pipes);
+            Pipe pipe = pipes[pipeIndex];
+            pipe.setIsPassed(false);
+            pipes.pop_front();
+            pipes.push_back(pipe);
         }
     }
 }
 
+/**
+ * @brief Generates and appends a series of Pipe objects to the provided deque.
+ *
+ * This function creates MAX_PIPES number of Pipe objects, each positioned horizontally
+ * at intervals of pipeInterval starting from the right edge of the window (win_w).
+ * The vertical position of each pipe is randomized between 250 and 450.
+ *
+ * @param pipes Reference to a deque of Pipe objects where the generated pipes will be appended.
+ * @param pipeInterval The horizontal distance between consecutive pipes.
+ */
 void GeneratePipes(std::deque<Pipe> &pipes, float pipeInterval)
 {
     for (int i = 0; i < MAX_PIPES; i++)
@@ -70,6 +109,15 @@ void GeneratePipes(std::deque<Pipe> &pipes, float pipeInterval)
     }
 }
 
+
+/**
+ * @brief Entry point for the Flappy Bird game.
+ *
+ * Initializes the game window, loads textures, and manages the main game loop.
+ * Handles game states (playing, paused, game over), user input, rendering, and game logic such as
+ * background scrolling, pipe generation and movement, collision detection, scoring, and restarting the game.
+ *
+ */
 int main()
 {
 
@@ -127,7 +175,6 @@ int main()
             {
                 gameState = 2;
                 scrollVel = 0;
-                // velocity = 0.f;
                 continue;
             }
 
@@ -148,6 +195,7 @@ int main()
                 // Check if bird is across the pipe and increment score.
                 if (((bottomPipeRec.x + bottomPipeRec.width) < birdRec.x) && !pipe.getIsPassed())
                 {
+                    // passed the pipe
                     score += 1;
                     pipe.setIsPassed(true);
                 }

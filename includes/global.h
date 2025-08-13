@@ -18,7 +18,7 @@ const int MAX_PIPES{5};       // Maximum number of pipes on screen
  * @param flappy The texture of the player (unused in this function).
  * @return true if the player is in the air, false if on or below the ground.
  */
-bool InAir(Vector2 pos, Texture2D flappy)
+inline bool InAir(Vector2 pos, Texture2D flappy)
 {
     // Returns true if Flappy's y-position is above the ground threshold
     return pos.y < (win_h + win_offset - 90);

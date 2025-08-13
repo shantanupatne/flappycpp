@@ -10,7 +10,6 @@
 #include "raylib.h"
 #include "pipe.h"
 #include "flappy.h"
-#include "global.h"
 
 /**
  * @brief Scrolls and draws a repeating background texture.

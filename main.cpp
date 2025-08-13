@@ -26,6 +26,7 @@ Vector2 scrollBackground(Texture2D texture, float scale, Vector2 pos, float velX
 void moveToBack(std::deque<Pipe> &pipes)
 {
     Pipe pipe = pipes[0];
+    pipe.setIsPassed(false);
     pipes.pop_front();
     pipes.push_back(pipe);
 }
@@ -40,12 +41,11 @@ void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float d
         if (pipe.getPos().x < -pipe.getWidth() - 10)
         {
             Pipe lastPipe = pipes.back();
-            // Pipe lastPipe = pipes[MAX_PIPES - 1]; // redundant, removed
             pipe.getPos().x = lastPipe.getPos().x + pipeInterval;
             pipe.getPos().y = GetRandomValue(250, 500);
             pipesToMove.push_back(i);
         }
-        // if (pipe.getPos().y < 300) pipe.getPos().y = 300.f;
+
         // Only draw pipes that are within the visible vertical range (y < 500)
         if (pipe.getPos().y < 500)
         {
@@ -61,8 +61,9 @@ void scrollPipe(std::deque<Pipe> &pipes, float pipeInterval, float velX, float d
         }
     }
 }
- 
-void GeneratePipes(std::deque<Pipe>& pipes, float pipeInterval) {
+
+void GeneratePipes(std::deque<Pipe> &pipes, float pipeInterval)
+{
     for (int i = 0; i < MAX_PIPES; i++)
     {
         pipes.push_back(Pipe{Vector2{win_w + i * pipeInterval, (float)GetRandomValue(250, 450)}});
@@ -74,7 +75,7 @@ int main()
 
     InitWindow(win_w, win_h + 2 * win_offset, "Flappy Bird");
     SetTargetFPS(60);
-    float bgScale{1.1f}; 
+    float bgScale{1.1f};
 
     Flappy flappy;
 
@@ -92,14 +93,12 @@ int main()
     std::deque<Pipe> pipes;
     GeneratePipes(pipes, pipeInterval);
 
-
     int scrollVel{60};
     while (!WindowShouldClose())
     {
         float dT = GetFrameTime();
         BeginDrawing();
         ClearBackground(WHITE);
-
 
         bgPos = scrollBackground(background, bgScale, bgPos, scrollVel / 3, dT);
         scrollPipe(pipes, pipeInterval, scrollVel, dT);
@@ -131,19 +130,27 @@ int main()
                 // velocity = 0.f;
                 continue;
             }
-            
+
             flappy.Update(dT, IsKeyPressed((KEY_SPACE)));
 
-            Rectangle birdRec {flappy.GetCollisionRect()};
+            Rectangle birdRec{flappy.GetCollisionRect()};
             for (auto &pipe : pipes)
             {
-                if (CheckCollisionRecs(birdRec, pipe.getBottomCollisionRec()) || CheckCollisionRecs(birdRec, pipe.getUpperCollisionRec()))
+                // Check for collision
+                Rectangle bottomPipeRec{ pipe.getBottomCollisionRec() };
+                if (CheckCollisionRecs(birdRec, bottomPipeRec) || CheckCollisionRecs(birdRec, pipe.getUpperCollisionRec()))
                 {
                     // collision
                     gameState = 2;
                     scrollVel = 0;
                     break;
-                } 
+                }
+                // Check if bird is across the pipe and increment score.
+                if (((bottomPipeRec.x + bottomPipeRec.width) < birdRec.x) && !pipe.getIsPassed())
+                {
+                    score += 1;
+                    pipe.setIsPassed(true);
+                }
             }
             flappy.Draw();
         }
